@@ -120,6 +120,7 @@ public class MainActivity extends AppCompatActivity {
             // so the dialog chrome follows the toggle without the destructive global-night-mode recreate.
             recreate();
         });
+        findViewById(R.id.alertBtn).setOnClickListener(v -> PriceAlert.showSettings(this, this::applyAlertSettings));
         Button openNode = findViewById(R.id.openNodeBtn);
         if (openNode != null) openNode.setOnClickListener(v -> openMinimaCore());
 
@@ -163,6 +164,16 @@ public class MainActivity extends AppCompatActivity {
      * notification, wakelocks or battery-nag. Public + idempotent so {@link MyLpView} can (re)invoke it the moment
      * the first pool is created — before that, OwnPoolStore is empty and this is a no-op.
      */
+    /** After the price-alert settings are saved: (re)start the background service so it picks up the new
+     *  threshold/language, or let it stop itself if neither the alert nor LP keep-alive needs it. */
+    private void applyAlertSettings() {
+        if (PriceAlert.enabled(this) || !OwnPoolStore.all(this).isEmpty()) {
+            ensureKeepAlive();
+        } else {
+            try { stopService(new Intent(this, PoolKeepAliveService.class)); } catch (Exception ignored) {}
+        }
+    }
+
     public void ensureKeepAlive() {
         if (OwnPoolStore.all(this).isEmpty() && !PriceAlert.enabled(this)) return;   // neither LP nor price alert → nothing to run
         ensureNotificationPermission();

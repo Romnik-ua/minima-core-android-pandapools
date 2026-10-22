@@ -62,6 +62,16 @@ public class PoolKeepAliveService extends Service {
             republishOne(intent.getStringExtra(EXTRA_ADDRESS));
             return START_STICKY;
         }
+        // Neither an LP node nor the price alert switched on → nothing to host; go away cleanly.
+        if (OwnPoolStore.all(getApplicationContext()).isEmpty() && !PriceAlert.enabled(getApplicationContext())) {
+            try { stopForeground(true); } catch (Exception ignored) {}
+            stopSelf();
+            return START_NOT_STICKY;
+        }
+        try {   // settings may have changed (threshold / language) → refresh the resident notification text
+            NotificationManager nm = getSystemService(NotificationManager.class);
+            if (nm != null) nm.notify(FG_ID, fgNotification());
+        } catch (Exception ignored) {}
         keepAlivePass();   // any start (heartbeat OR relaunch) drives a pass; throttled + LP-gated + wakelock inside
         return START_STICKY;
     }
@@ -169,7 +179,8 @@ public class PoolKeepAliveService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return new NotificationCompat.Builder(this, CH_FG)
                 .setContentTitle("PandaPools")
-                .setContentText("Стежу за ціною MINIMA/USDT (сповіщення при відхиленні ≥10% від ринку)")
+                .setContentText(PriceAlert.enabled(this) ? PriceAlert.watchingText(this)
+                        : "Keeping your pools discoverable to other devices")
                 .setSmallIcon(android.R.drawable.stat_sys_upload_done)
                 .setContentIntent(pi)
                 .setOngoing(true)
