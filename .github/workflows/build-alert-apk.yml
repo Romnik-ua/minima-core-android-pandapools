@@ -36,5 +36,5 @@ jobs:
         with:
           tag_name: alert-${{ github.run_number }}
           name: PandaPools Alert build ${{ github.run_number }}
-          body: PandaPools 0.9.23 + сповіщення при відхиленні ціни пулу MINIMA/USDT від MEXC на ≥10%.
+          body: PandaPools 0.9.23 + сповіщення про відхилення ціни пулу MINIMA/USDT від MEXC (поріг, вмикач і мова UA/EN — кнопка 🔔 у шапці).
           files: app/build/outputs/apk/release/*.apk
