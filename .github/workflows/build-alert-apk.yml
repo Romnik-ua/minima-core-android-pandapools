@@ -1,9 +1,7 @@
 name: Build PandaPools Alert APK
 
 on:
-  push:
-    branches: [ main ]
-  workflow_dispatch:
+  workflow_dispatch:   # manual only — delayed push events were publishing stale builds as "Latest"
 
 permissions:
   contents: write
@@ -39,5 +37,5 @@ jobs:
         with:
           tag_name: alert-${{ github.run_number }}
           name: PandaPools Alert build ${{ github.run_number }}
-          body: PandaPools 0.9.23 + сповіщення про відхилення ціни пулу MINIMA/USDT від MEXC (поріг, вмикач і мова UA/EN — кнопка 🔔 у шапці).
+          body: PandaPools 0.9.66 + сповіщення про відхилення ціни пулу MINIMA/USDT від MEXC (поріг, вмикач і мова UA/EN — кнопка 🔔 у шапці).
           files: app/build/outputs/apk/release/*.apk
