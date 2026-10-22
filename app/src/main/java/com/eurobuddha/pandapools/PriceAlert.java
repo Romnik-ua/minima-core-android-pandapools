@@ -253,18 +253,9 @@ public final class PriceAlert {
                                     : "🔴 SELL: pool +" + p + "% vs market";
             else    title = cheaper ? "🟢 КУПИТИ: пул −" + p + "% від ринку"
                                     : "🔴 ПРОДАТИ: пул +" + p + "% від ринку";
-            String body = (en ? "Pool " : "Пул ") + six(spot) + " · MEXC " + six(mid) + " USDT/MINIMA";
-            String note = en ? (cheaper ? "\nMINIMA is cheaper in the pool than on MEXC."
-                                        : "\nMINIMA is dearer in the pool than on MEXC.")
-                               + "\nSpot price; the real swap rate depends on size (0.5% fee + price impact)."
-                             : (cheaper ? "\nMINIMA у пулі дешевше, ніж на MEXC."
-                                        : "\nMINIMA у пулі дорожче, ніж на MEXC.")
-                               + "\nЦе ціна спот; фактичний курс обміну залежить від суми (комісія 0,5% + зсув ціни).";
             nm.notify(NOTIF_ID, new NotificationCompat.Builder(app, CH)
                     .setSmallIcon(android.R.drawable.stat_notify_more)
-                    .setContentTitle(title)
-                    .setContentText(body)
-                    .setStyle(new NotificationCompat.BigTextStyle().bigText(body + note))
+                    .setContentTitle(title)   // title only — the user asked for no body text
                     .setPriority(NotificationCompat.PRIORITY_HIGH)
                     .setAutoCancel(true)
                     .setContentIntent(pi)
