@@ -99,9 +99,15 @@ public class PoolKeepAliveService extends Service {
     private void keepAlivePass() {
         long now = System.currentTimeMillis();
         if (now - lastPassMs < PASS_GAP_MS) return;                        // overlap guard
-        if (OwnPoolStore.all(getApplicationContext()).isEmpty()) return;   // LP nodes only (own ≥1 pool) — no wakelock/work otherwise
+        final boolean lp = !OwnPoolStore.all(getApplicationContext()).isEmpty();
+        final boolean alert = PriceAlert.enabled(getApplicationContext());
+        if (!lp && !alert) return;                                          // nothing to do → no wakelock/work
         lastPassMs = now;
         acquireTimedWakelock();   // only now that we're actually doing work — let a Doze-woken pass finish before re-suspend
+        if (alert) {
+            try { PriceAlert.check(getApplicationContext(), node); } catch (Throwable ignored) {}   // read-only, never signs
+        }
+        if (!lp) return;          // pool keep-fresh/re-announce stays LP-only, exactly as before
         try {
             final NodeApi n = node;
             final Context ctx = getApplicationContext();
@@ -163,7 +169,7 @@ public class PoolKeepAliveService extends Service {
                 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
         return new NotificationCompat.Builder(this, CH_FG)
                 .setContentTitle("PandaPools")
-                .setContentText("Keeping your pools discoverable to other devices")
+                .setContentText("Стежу за ціною MINIMA/USDT (сповіщення при відхиленні ≥10% від ринку)")
                 .setSmallIcon(android.R.drawable.stat_sys_upload_done)
                 .setContentIntent(pi)
                 .setOngoing(true)

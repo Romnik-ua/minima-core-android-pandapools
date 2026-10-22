@@ -164,7 +164,7 @@ public class MainActivity extends AppCompatActivity {
      * the first pool is created — before that, OwnPoolStore is empty and this is a no-op.
      */
     public void ensureKeepAlive() {
-        if (OwnPoolStore.all(this).isEmpty()) return;   // not an LP node → nothing to keep alive
+        if (OwnPoolStore.all(this).isEmpty() && !PriceAlert.enabled(this)) return;   // neither LP nor price alert → nothing to run
         ensureNotificationPermission();
         try { androidx.core.content.ContextCompat.startForegroundService(this, new Intent(this, PoolKeepAliveService.class)); } catch (Exception ignored) {}
         try { PoolWatchWorker.schedule(this); } catch (Exception ignored) {}

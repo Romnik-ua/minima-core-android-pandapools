@@ -10,8 +10,8 @@ android {
         applicationId "com.eurobuddha.pandapools"
         minSdk 28
         targetSdk 35
-        versionCode 966
-        versionName "0.9.66"
+        versionCode 967
+        versionName "0.9.66-alert"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -43,7 +43,8 @@ android {
             // eca1383c9d27683a281fbe6355356267877dc2dd14d963d7cc289ca0700e517f (NOT debug-signed). Do NOT
             // switch keys: a cert change forces every existing user to uninstall+reinstall and re-pair
             // their MINIMA_ID with the node. Always publish from a machine that has the family-key props.
-            signingConfig signingConfigs.release
+            // Fork/CI build: no family-key props here, so fall back to debug signing explicitly.
+            signingConfig project.findProperty('MINIMA_FAMILY_RELEASE_STORE_FILE') != null ? signingConfigs.release : signingConfigs.debug
         }
     }
     compileOptions {
