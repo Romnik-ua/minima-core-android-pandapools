@@ -7,11 +7,11 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId "com.eurobuddha.pandapools"
+        applicationId "com.eurobuddha.pandapools.alert"   // separate app: installs beside the official one
         minSdk 28
         targetSdk 35
         versionCode 923
-        versionName "0.9.23"
+        versionName "0.9.23-alert"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }

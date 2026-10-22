@@ -77,6 +77,18 @@ public final class MarketPrice {
         EXEC.execute(() -> { try { fetchOnce(); } finally { synchronized (LOCK) { fetching = false; } } });
     }
 
+    /** Fetch now (off the main thread, ignoring the 30 s pacing — callers like the 15-min price alert are already
+     *  slow), then run {@code after} on the main thread whatever the outcome. Readers check {@link #fresh()}. */
+    public static void refreshThen(Runnable after) {
+        final android.os.Handler main = new android.os.Handler(android.os.Looper.getMainLooper());
+        EXEC.execute(() -> {
+            boolean run;
+            synchronized (LOCK) { run = !fetching; if (run) { fetching = true; lastTryMs = System.currentTimeMillis(); } }
+            if (run) { try { fetchOnce(); } finally { synchronized (LOCK) { fetching = false; } } }
+            main.post(after);
+        });
+    }
+
     private static void fetchOnce() {
         try {
             double b, a;
