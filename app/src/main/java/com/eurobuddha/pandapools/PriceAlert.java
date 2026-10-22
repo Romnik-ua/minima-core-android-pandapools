@@ -247,14 +247,19 @@ public final class PriceAlert {
                     PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
             boolean cheaper = pct.signum() < 0;
             String p = pct.abs().setScale(1, RoundingMode.HALF_UP).toPlainString();
+            // Action FIRST and short, so it survives truncation on a narrow phone screen.
             String title;
-            if (en) title = cheaper ? "MINIMA " + p + "% CHEAPER in the pool than market — buy"
-                                    : "MINIMA " + p + "% DEARER in the pool than market — sell";
-            else    title = cheaper ? "MINIMA у пулі на " + p + "% ДЕШЕВШЕ за ринок — вигідно купити"
-                                    : "MINIMA у пулі на " + p + "% ДОРОЖЧЕ за ринок — вигідно продати";
-            String body = (en ? "Pool " : "Пул ") + six(spot) + " USDT/MINIMA · MEXC " + six(mid) + " USDT/MINIMA";
-            String note = en ? "\nSpot price; the real swap rate depends on size (0.5% fee + price impact)."
-                             : "\nЦе ціна спот; фактичний курс обміну залежить від суми (комісія 0,5% + зсув ціни).";
+            if (en) title = cheaper ? "🟢 BUY: pool −" + p + "% vs market"
+                                    : "🔴 SELL: pool +" + p + "% vs market";
+            else    title = cheaper ? "🟢 КУПИТИ: пул −" + p + "% від ринку"
+                                    : "🔴 ПРОДАТИ: пул +" + p + "% від ринку";
+            String body = (en ? "Pool " : "Пул ") + six(spot) + " · MEXC " + six(mid) + " USDT/MINIMA";
+            String note = en ? (cheaper ? "\nMINIMA is cheaper in the pool than on MEXC."
+                                        : "\nMINIMA is dearer in the pool than on MEXC.")
+                               + "\nSpot price; the real swap rate depends on size (0.5% fee + price impact)."
+                             : (cheaper ? "\nMINIMA у пулі дешевше, ніж на MEXC."
+                                        : "\nMINIMA у пулі дорожче, ніж на MEXC.")
+                               + "\nЦе ціна спот; фактичний курс обміну залежить від суми (комісія 0,5% + зсув ціни).";
             nm.notify(NOTIF_ID, new NotificationCompat.Builder(app, CH)
                     .setSmallIcon(android.R.drawable.stat_notify_more)
                     .setContentTitle(title)
