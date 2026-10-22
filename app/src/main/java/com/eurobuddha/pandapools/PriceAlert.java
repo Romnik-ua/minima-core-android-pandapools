@@ -44,6 +44,9 @@ public final class PriceAlert {
     private static final String K_ENABLED = "enabled";
     private static final String K_THRESHOLD = "threshold_pct";
     private static final String K_LANG = "lang";              // "uk" | "en"
+    private static final String K_INTERVAL = "interval_min";  // 5 | 10 | 15
+    private static final long IN_APP_GAP_MS = 60_000;         // in-app (per-block) checks: at most once a minute
+    private static long lastInAppMs = 0;
     private static final String K_LAST = "last_alert_pct";    // absent ⇒ armed
     private static final String CH = "pp_price_alert";
     private static final int NOTIF_ID = 7302;
@@ -57,14 +60,26 @@ public final class PriceAlert {
         catch (Exception e) { return PriceAlertRule.DEFAULT_THRESHOLD; }
     }
 
+    /** Background check interval in minutes (5 / 10 / 15; default 10). */
+    public static int intervalMin(Context ctx) {
+        int m = prefs(ctx).getInt(K_INTERVAL, 10);
+        return (m == 5 || m == 10 || m == 15) ? m : 10;
+    }
+
+    /** Heartbeat interval: the chosen alert interval while alerts are on, else the original 15 min. */
+    public static long heartbeatMs(Context ctx) {
+        return (enabled(ctx) ? intervalMin(ctx) : 15) * 60_000L;
+    }
+
     public static boolean english(Context ctx) { return "en".equals(prefs(ctx).getString(K_LANG, "uk")); }
 
     /** Text for the resident foreground notification while the alert is on. */
     public static String watchingText(Context ctx) {
         String n = threshold(ctx).toPlainString();
+        int m = intervalMin(ctx);
         return english(ctx)
-                ? "Watching MINIMA/USDT price (alert at ≥" + n + "% from market)"
-                : "Стежу за ціною MINIMA/USDT (сповіщення при відхиленні ≥" + n + "% від ринку)";
+                ? "Watching MINIMA/USDT every " + m + " min (alert at ≥" + n + "% from market)"
+                : "Стежу за MINIMA/USDT кожні " + m + " хв (сповіщення при відхиленні ≥" + n + "%)";
     }
 
     /** Settings dialog: on/off, threshold %, language. {@code onSaved} runs after a save (e.g. to (re)start the
@@ -91,6 +106,26 @@ public final class PriceAlert {
         pct.setHint("10");
         box.addView(pct);
 
+        TextView il = new TextView(act);
+        il.setText(en ? "\nCheck every (in background):" : "\nПеревіряти кожні (у фоні):");
+        box.addView(il);
+        final RadioGroup ig = new RadioGroup(act);
+        ig.setOrientation(LinearLayout.HORIZONTAL);
+        final int[] mins = {5, 10, 15};
+        for (int m : mins) {
+            RadioButton rb = new RadioButton(act);
+            rb.setText(m + (en ? " min  " : " хв  "));
+            rb.setId(100 + m);
+            ig.addView(rb);
+        }
+        ig.check(100 + intervalMin(act));
+        box.addView(ig);
+        TextView inote = new TextView(act);
+        inote.setText(en ? "While the app is open, the price is checked with every new block."
+                         : "Поки застосунок відкритий, ціна перевіряється з кожним новим блоком.");
+        inote.setTextSize(12);
+        box.addView(inote);
+
         TextView ll = new TextView(act);
         ll.setText(en ? "\nNotification language:" : "\nМова сповіщень:");
         box.addView(ll);
@@ -113,7 +148,8 @@ public final class PriceAlert {
                     SharedPreferences.Editor ed = prefs(act).edit()
                             .putBoolean(K_ENABLED, sw.isChecked())
                             .putString(K_THRESHOLD, t.toPlainString())
-                            .putString(K_LANG, rg.getCheckedRadioButtonId() == 2 ? "en" : "uk");
+                            .putString(K_LANG, rg.getCheckedRadioButtonId() == 2 ? "en" : "uk")
+                            .putInt(K_INTERVAL, Math.max(5, Math.min(15, ig.getCheckedRadioButtonId() - 100)));
                     if (changed || !sw.isChecked()) ed.remove(K_LAST);   // new threshold / off → start fresh
                     ed.apply();
                     boolean nowEn = english(act);
@@ -140,6 +176,19 @@ public final class PriceAlert {
             }
             @Override public void onError(String msg) { /* try again next heartbeat */ }
         });
+    }
+
+    /** In-app path: called with every shared pool scan (one per new block while the app is open). Reuses the
+     *  scan the Swap page already did — no extra node queries — and fetches MEXC at most once a minute. */
+    public static void onPools(Context ctx, List<Pool> pools) {
+        final Context app = ctx.getApplicationContext();
+        if (!enabled(app)) return;
+        long now = System.currentTimeMillis();
+        if (now - lastInAppMs < IN_APP_GAP_MS) return;
+        final BigDecimal spot = usdtSpot(pools);
+        if (spot == null) return;
+        lastInAppMs = now;
+        MarketPrice.refreshThen(() -> evaluate(app, spot));
     }
 
     static BigDecimal usdtSpot(List<Pool> pools) {

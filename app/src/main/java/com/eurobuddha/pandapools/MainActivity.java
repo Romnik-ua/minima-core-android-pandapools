@@ -133,6 +133,11 @@ public class MainActivity extends AppCompatActivity {
         node = new NodeApi(this, enabled -> ui.post(() -> setPaired(enabled)));
         history = new HistoryDb(this);
         poolRepo = new PoolRepository(node);   // must exist before the views (they subscribe in their ctors)
+        // Price alert also rides the shared per-block scan while the app is open (no extra node queries).
+        poolRepo.subscribe(new PoolBook.Listener() {
+            @Override public void onPools(java.util.List<Pool> pools) { PriceAlert.onPools(MainActivity.this, pools); }
+            @Override public void onError(String msg) {}
+        });
 
         // tabs — Swap · Pools · My LP · Wallet (available balances) · Activity (personal + global history)
         views = new BaseView[]{ new SwapView(this), new PoolsView(this), new MyLpView(this),

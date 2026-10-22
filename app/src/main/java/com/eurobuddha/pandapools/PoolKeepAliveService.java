@@ -37,7 +37,7 @@ public class PoolKeepAliveService extends Service {
     /** Fired by a stranding notification's Re-publish action. */
     public static final String ACTION_REPUBLISH = "com.eurobuddha.pandapools.REPUBLISH";
     public static final String EXTRA_ADDRESS = "address";
-    private static final long PASS_GAP_MS = 5 * 60_000;   // don't run the pass more than once per 5 min (guards a heartbeat/relaunch overlap; never blocks a real 15-min heartbeat)
+    private static final long PASS_GAP_MS = 4 * 60_000;   // < the shortest (5-min) price-alert heartbeat   // don't run the pass more than once per 5 min (guards a heartbeat/relaunch overlap; never blocks a real 15-min heartbeat)
 
     private NodeApi node;
     private boolean started = false;   // true only after a successful startForeground + node create
