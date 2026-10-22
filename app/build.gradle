@@ -7,10 +7,10 @@ android {
     compileSdk 36
 
     defaultConfig {
-        applicationId "com.eurobuddha.pandapools.alert"   // separate app: installs beside the official one
+        applicationId "com.eurobuddha.pandapools"   // must stay the official id: Minima Core only lists known packages
         minSdk 28
         targetSdk 35
-        versionCode 923
+        versionCode 924
         versionName "0.9.23-alert"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
