@@ -82,23 +82,20 @@ public final class PriceAlert {
                 : "Стежу за MINIMA/USDT кожні " + m + " хв (сповіщення при відхиленні ≥" + n + "%)";
     }
 
-    /** Settings dialog: on/off, threshold %, language. {@code onSaved} runs after a save (e.g. to (re)start the
-     *  background service). */
+    /** Settings dialog: on/off, threshold %, interval, language. The dialog's own text follows the language
+     *  radio LIVE, so flipping Українська/English re-labels everything at once. {@code onSaved} runs after a save
+     *  (e.g. to (re)start the background service). */
     public static void showSettings(final Activity act, final Runnable onSaved) {
-        final boolean en = english(act);
         int pad = Ui.dp(act, 20);
         LinearLayout box = new LinearLayout(act);
         box.setOrientation(LinearLayout.VERTICAL);
         box.setPadding(pad, Ui.dp(act, 8), pad, 0);
 
         final Switch sw = new Switch(act);
-        sw.setText(en ? "Price alerts" : "Сповіщення про ціну");
         sw.setChecked(enabled(act));
         box.addView(sw);
 
-        TextView lbl = new TextView(act);
-        lbl.setText(en ? "\nAlert when the pool is this many % below or above MEXC:"
-                       : "\nСповіщати, коли пул на стільки % дешевший або дорожчий за MEXC:");
+        final TextView lbl = new TextView(act);
         box.addView(lbl);
         final EditText pct = new EditText(act);
         pct.setInputType(InputType.TYPE_CLASS_NUMBER | InputType.TYPE_NUMBER_FLAG_DECIMAL);
@@ -106,40 +103,36 @@ public final class PriceAlert {
         pct.setHint("10");
         box.addView(pct);
 
-        TextView il = new TextView(act);
-        il.setText(en ? "\nCheck every (in background):" : "\nПеревіряти кожні (у фоні):");
+        final TextView il = new TextView(act);
         box.addView(il);
         final RadioGroup ig = new RadioGroup(act);
         ig.setOrientation(LinearLayout.HORIZONTAL);
         final int[] mins = {5, 10, 15};
-        for (int m : mins) {
-            RadioButton rb = new RadioButton(act);
-            rb.setText(m + (en ? " min  " : " хв  "));
-            rb.setId(100 + m);
-            ig.addView(rb);
+        final RadioButton[] minBtns = new RadioButton[mins.length];
+        for (int i = 0; i < mins.length; i++) {
+            minBtns[i] = new RadioButton(act);
+            minBtns[i].setId(100 + mins[i]);
+            ig.addView(minBtns[i]);
         }
         ig.check(100 + intervalMin(act));
         box.addView(ig);
-        TextView inote = new TextView(act);
-        inote.setText(en ? "While the app is open, the price is checked with every new block."
-                         : "Поки застосунок відкритий, ціна перевіряється з кожним новим блоком.");
+        final TextView inote = new TextView(act);
         inote.setTextSize(12);
         box.addView(inote);
 
-        TextView ll = new TextView(act);
-        ll.setText(en ? "\nNotification language:" : "\nМова сповіщень:");
+        final TextView ll = new TextView(act);
         box.addView(ll);
         final RadioGroup rg = new RadioGroup(act);
         final RadioButton uk = new RadioButton(act); uk.setText("Українська"); uk.setId(1);
         final RadioButton eng = new RadioButton(act); eng.setText("English"); eng.setId(2);
         rg.addView(uk); rg.addView(eng);
-        rg.check(en ? 2 : 1);
+        rg.check(english(act) ? 2 : 1);
         box.addView(rg);
 
-        new AlertDialog.Builder(act)
-                .setTitle(en ? "Price alert" : "Сповіщення про ціну")
+        final AlertDialog dlg = new AlertDialog.Builder(act)
+                .setTitle(" ")
                 .setView(box)
-                .setPositiveButton(en ? "Save" : "Зберегти", (d, w) -> {
+                .setPositiveButton(" ", (d, w) -> {
                     BigDecimal t;
                     try { t = new BigDecimal(pct.getText().toString().trim().replace(',', '.')); }
                     catch (Exception e) { t = null; }
@@ -158,8 +151,30 @@ public final class PriceAlert {
                             : (nowEn ? "Price alerts off" : "Сповіщення вимкнено"), Toast.LENGTH_SHORT).show();
                     if (onSaved != null) onSaved.run();
                 })
-                .setNegativeButton(en ? "Cancel" : "Скасувати", null)
-                .show();
+                .setNegativeButton(" ", null)
+                .create();
+
+        // Every visible string in one place, re-applied whenever the language radio changes.
+        final Runnable relabel = () -> {
+            boolean en = rg.getCheckedRadioButtonId() == 2;
+            dlg.setTitle(en ? "Price alert" : "Сповіщення про ціну");
+            sw.setText(en ? "Price alerts" : "Сповіщення про ціну");
+            lbl.setText(en ? "\nAlert when the pool is this many % below or above MEXC:"
+                           : "\nСповіщати, коли пул на стільки % дешевший або дорожчий за MEXC:");
+            il.setText(en ? "\nCheck every (in background):" : "\nПеревіряти кожні (у фоні):");
+            for (int i = 0; i < mins.length; i++) minBtns[i].setText(mins[i] + (en ? " min  " : " хв  "));
+            inote.setText(en ? "While the app is open, the price is checked with every new block."
+                             : "Поки застосунок відкритий, ціна перевіряється з кожним новим блоком.");
+            ll.setText(en ? "\nLanguage:" : "\nМова:");
+            if (dlg.getButton(AlertDialog.BUTTON_POSITIVE) != null) {
+                dlg.getButton(AlertDialog.BUTTON_POSITIVE).setText(en ? "Save" : "Зберегти");
+                dlg.getButton(AlertDialog.BUTTON_NEGATIVE).setText(en ? "Cancel" : "Скасувати");
+            }
+        };
+        rg.setOnCheckedChangeListener((group, id) -> relabel.run());
+        relabel.run();                       // labels before show (buttons don't exist yet)
+        dlg.setOnShowListener(d -> relabel.run());   // …and again once the buttons exist
+        dlg.show();
     }
 
     // ---------------- the check ----------------
